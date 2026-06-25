@@ -163,6 +163,33 @@
   }
   .autocomplete-clear.show{display:block;}
   .autocomplete-clear:hover{background:var(--paper);}
+
+  /* ===== Station autocomplete (From / To) ===== */
+  .station-ac{position:relative;}
+  .station-ac input{cursor:text;}
+  .station-ac-panel{
+    position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:30;
+    background:#fff;border:1px solid var(--line);border-radius:6px;
+    max-height:220px;overflow-y:auto;
+    box-shadow:0 4px 14px rgba(26,35,50,0.14);
+    display:none;
+  }
+  .station-ac-panel.open{display:block;}
+  .station-ac-option{
+    padding:9px 12px;cursor:pointer;font-size:13.5px;
+    border-bottom:1px solid var(--line);
+  }
+  .station-ac-option:last-child{border-bottom:none;}
+  .station-ac-option:hover,.station-ac-option.highlighted{background:var(--usps-blue-soft);}
+  .addr-toggle{
+    font-size:11.5px;color:var(--usps-blue);cursor:pointer;
+    background:none;border:none;padding:0;margin-top:4px;
+    text-decoration:underline;display:inline-block;
+  }
+  .addr-toggle:hover{color:#003a68;background:none;}
+  .addr-mode-label{
+    font-size:11px;color:var(--slate);font-style:italic;margin-bottom:3px;display:block;
+  }
   .autocomplete input{padding-right:32px;}
   .selected-truck-card{
     margin-top:8px;padding:8px 10px;background:var(--usps-blue-soft);border-radius:6px;
@@ -332,11 +359,18 @@
           <div class="field-row">
             <div class="field">
               <label for="entry-from">From</label>
-              <input type="text" id="entry-from" placeholder="Origin location">
+              <div class="station-ac" id="from-station-ac-wrap">
+                <input type="text" id="entry-from" placeholder="Station or address" autocomplete="off">
+                <div class="station-ac-panel" id="from-station-panel"></div>
+              </div>
+              <button type="button" class="addr-toggle" id="from-addr-toggle">Use road address instead</button>
             </div>
             <div class="field">
               <label for="entry-to">To</label>
-              <input type="text" id="entry-to" placeholder="Destination">
+              <div class="station-ac" id="to-station-ac-wrap">
+                <input type="text" id="entry-to" placeholder="Destination station" autocomplete="off">
+                <div class="station-ac-panel" id="to-station-panel"></div>
+              </div>
             </div>
           </div>
 
@@ -681,6 +715,93 @@
     opts[acHighlightIndex].scrollIntoView({ block: 'nearest' });
   }
 
+  /* ===== Station autocomplete (From / To) ===== */
+  var fromAddrMode = false;
+
+  function getUniqueStations(){
+    var seen = {};
+    var stations = [];
+    (state.trucks || []).forEach(function(t){
+      if(t.homeStation && t.homeStation.trim()){
+        var s = t.homeStation.trim();
+        if(!seen[s.toLowerCase()]){ seen[s.toLowerCase()] = true; stations.push(s); }
+      }
+    });
+    return stations.sort();
+  }
+
+  function openStationPanel(panelId, inputEl, stations){
+    var panel = document.getElementById(panelId);
+    if(stations.length === 0){ panel.classList.remove('open'); return; }
+    panel.innerHTML = stations.slice(0,30).map(function(s){
+      return '<div class="station-ac-option">' + escapeHtml(s) + '</div>';
+    }).join('');
+    panel.querySelectorAll('.station-ac-option').forEach(function(opt){
+      opt.addEventListener('mousedown', function(ev){
+        ev.preventDefault();
+        inputEl.value = opt.textContent;
+        panel.classList.remove('open');
+      });
+    });
+    panel.classList.add('open');
+  }
+
+  function closeStationPanel(panelId){
+    var panel = document.getElementById(panelId);
+    if(panel) panel.classList.remove('open');
+  }
+
+  function handleStationInput(inputEl, panelId){
+    var q = inputEl.value.trim().toLowerCase();
+    if(q === ''){ closeStationPanel(panelId); return; }
+    var matches = getUniqueStations().filter(function(s){ return s.toLowerCase().indexOf(q) !== -1; });
+    openStationPanel(panelId, inputEl, matches);
+  }
+
+  function initStationAutocomplete(){
+    var fromInput = document.getElementById('entry-from');
+    var toInput   = document.getElementById('entry-to');
+    var toggle    = document.getElementById('from-addr-toggle');
+
+    fromInput.addEventListener('input', function(){
+      if(!fromAddrMode) handleStationInput(fromInput, 'from-station-panel');
+    });
+    fromInput.addEventListener('focus', function(){
+      if(!fromAddrMode){
+        var q = fromInput.value.trim().toLowerCase();
+        var list = q ? getUniqueStations().filter(function(s){ return s.toLowerCase().indexOf(q) !== -1; }) : getUniqueStations();
+        openStationPanel('from-station-panel', fromInput, list);
+      }
+    });
+    fromInput.addEventListener('blur', function(){ setTimeout(function(){ closeStationPanel('from-station-panel'); }, 150); });
+
+    toInput.addEventListener('input', function(){ handleStationInput(toInput, 'to-station-panel'); });
+    toInput.addEventListener('focus', function(){
+      var q = toInput.value.trim().toLowerCase();
+      var list = q ? getUniqueStations().filter(function(s){ return s.toLowerCase().indexOf(q) !== -1; }) : getUniqueStations();
+      openStationPanel('to-station-panel', toInput, list);
+    });
+    toInput.addEventListener('blur', function(){ setTimeout(function(){ closeStationPanel('to-station-panel'); }, 150); });
+
+    toggle.addEventListener('click', function(){
+      fromAddrMode = !fromAddrMode;
+      closeStationPanel('from-station-panel');
+      fromInput.value = '';
+      if(fromAddrMode){
+        fromInput.placeholder = 'e.g. 1234 Main St, Houston TX';
+        toggle.textContent = 'Use station instead';
+        var lbl = document.querySelector('#from-station-ac-wrap');
+        if(lbl) lbl.insertAdjacentHTML('beforebegin', '<span class="addr-mode-label" id="addr-mode-lbl">Road address mode</span>');
+      } else {
+        fromInput.placeholder = 'Station or address';
+        toggle.textContent = 'Use road address instead';
+        var existing = document.getElementById('addr-mode-lbl');
+        if(existing) existing.remove();
+      }
+      fromInput.focus();
+    });
+  }
+
   /* ===== Log rendering ===== */
   function formatDate(iso){
     if(!iso) return '—';
@@ -779,6 +900,15 @@
     document.getElementById('entry-home-station').value = '';
     document.getElementById('entry-from').value = '';
     document.getElementById('entry-to').value = '';
+    // Reset address mode on From field
+    if(fromAddrMode){
+      fromAddrMode = false;
+      document.getElementById('entry-from').placeholder = 'Station or address';
+      var toggle = document.getElementById('from-addr-toggle');
+      if(toggle) toggle.textContent = 'Use road address instead';
+      var lbl = document.getElementById('addr-mode-lbl');
+      if(lbl) lbl.remove();
+    }
     document.getElementById('entry-date').value = todayIso();
     document.getElementById('entry-odo').value = '';
     document.getElementById('entry-has-issue').checked = false;
@@ -1040,6 +1170,7 @@
   document.getElementById('cancel-edit-btn').addEventListener('click', resetForm);
   document.getElementById('filter-truck').addEventListener('change', renderLog);
   document.getElementById('filter-status').addEventListener('change', renderLog);
+  initStationAutocomplete();
 
   document.getElementById('open-import-btn').addEventListener('click', openImportModal);
   document.getElementById('import-close-btn').addEventListener('click', closeImportModal);
