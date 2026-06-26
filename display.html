@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ISY Shop Display — Texas FleetServ</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.1.0/iconfont/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Archivo+Expanded:wght@700;800&family=IBM+Plex+Mono:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1A2332;
+    --red-bg:#C0392B; --red-soft:#FFF0EE; --red-border:#C0392B; --red-label:#7B1A12;
+    --blue-bg:#004B87; --blue-soft:#E5EFF7; --blue-border:#004B87; --blue-label:#003060;
+    --amber:#E8A33D; --amber-soft:#FBEFDC;
+    --ok-green:#3B7A57; --ok-soft:#E7F2EC;
+    --line:#DCD8CD; --paper:#F7F5F0; --slate:#5C6670; --slate-light:#8B9199;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:#111827;
+    font-family:'Inter',sans-serif;
+    color:#fff;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  /* ── Header ── */
+  .header{
+    background:#0f1621;
+    border-bottom:3px solid #C0392B;
+    padding:14px 28px;
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;
+  }
+  .header-left{display:flex;align-items:center;gap:16px;}
+  .header-logo{height:52px;width:auto;}
+  .header-title{
+    font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:22px;
+    text-transform:uppercase;letter-spacing:0.5px;color:#fff;
+  }
+  .header-sub{font-size:13px;color:#6B7280;margin-top:2px;}
+  .header-right{display:flex;align-items:center;gap:16px;}
+  .live-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:12px;font-weight:700;color:#10B981;
+    background:rgba(16,185,129,0.12);padding:5px 12px;border-radius:20px;
+    border:1px solid rgba(16,185,129,0.3);letter-spacing:0.3px;
+  }
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#10B981;animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.85);}}
+  .clock{
+    font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:700;
+    color:#fff;letter-spacing:1px;
+  }
+  .date-line{font-size:11px;color:#6B7280;text-align:right;margin-top:1px;}
+
+  /* ── Main layout ── */
+  .main{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:0;
+    height:calc(100vh - 83px);
+  }
+
+  /* ── Zone panels ── */
+  .zone-panel{
+    display:flex;flex-direction:column;
+    border-right:2px solid #1F2937;
+    overflow:hidden;
+  }
+  .zone-panel:last-child{border-right:none;}
+
+  .zone-header{
+    padding:14px 20px 12px;
+    display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  }
+  .zone-header.red-zone{ background:#7B1A12; }
+  .zone-header.blue-zone{ background:#003060; }
+
+  .zone-title{
+    font-family:'Archivo Expanded',sans-serif;font-weight:800;font-size:18px;
+    text-transform:uppercase;letter-spacing:0.5px;color:#fff;
+    display:flex;align-items:center;gap:10px;
+  }
+  .zone-count-pill{
+    font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;
+    background:rgba(255,255,255,0.18);color:#fff;
+    padding:3px 12px;border-radius:20px;
+  }
+
+  .zone-grid{
+    flex:1;overflow-y:auto;
+    padding:12px;
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+    gap:10px;
+    align-content:start;
+  }
+
+  /* ── Spot cards ── */
+  .spot-card{
+    border-radius:10px;padding:14px 14px 12px;
+    display:flex;flex-direction:column;gap:6px;
+    position:relative;min-height:110px;
+  }
+  .spot-card.empty{
+    background:#1F2937;border:2px dashed #374151;
+    opacity:0.5;
+  }
+  .spot-card.occupied-red{
+    background:var(--red-soft);border:2px solid var(--red-border);
+  }
+  .spot-card.occupied-blue{
+    background:var(--blue-soft);border:2px solid var(--blue-border);
+  }
+  .spot-card.flagged{
+    background:var(--amber-soft);border:2px solid var(--amber);
+  }
+
+  .spot-label{
+    font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;
+    font-family:'Archivo',sans-serif;
+  }
+  .spot-card.empty .spot-label{color:#4B5563;}
+  .spot-card.occupied-red .spot-label{color:var(--red-label);}
+  .spot-card.occupied-blue .spot-label{color:var(--blue-label);}
+  .spot-card.flagged .spot-label{color:#7A4A00;}
+
+  .spot-truck{
+    font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:17px;
+    color:var(--ink);line-height:1.1;
+  }
+  .spot-card.empty .spot-truck{display:none;}
+
+  .spot-home{
+    font-size:11.5px;color:var(--slate);display:flex;align-items:center;gap:4px;
+  }
+  .spot-home i{font-size:11px;}
+
+  .spot-type-badge{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:700;
+    padding:2px 7px;border-radius:3px;display:inline-block;align-self:flex-start;
+  }
+  .occupied-red .spot-type-badge{ color:var(--red-bg);background:#fff;border:1px solid var(--red-border); }
+  .occupied-blue .spot-type-badge{ color:var(--blue-bg);background:#fff;border:1px solid var(--blue-border); }
+  .flagged .spot-type-badge{ color:#7A4A00;background:#fff;border:1px solid var(--amber); }
+
+  .spot-issue{
+    font-size:11px;color:#5C3E0B;background:var(--amber-soft);
+    border:1px solid var(--amber);border-radius:4px;
+    padding:4px 7px;display:flex;gap:5px;align-items:flex-start;
+    line-height:1.35;
+  }
+  .spot-issue i{flex-shrink:0;font-size:12px;color:var(--amber);margin-top:1px;}
+
+  .spot-assign{
+    display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px;
+  }
+  .assign-tech{
+    font-size:11.5px;font-weight:600;color:var(--ink);
+    background:#fff;border:1px solid var(--line);
+    padding:2px 8px;border-radius:4px;display:inline-flex;align-items:center;gap:4px;
+  }
+  .assign-tech i{font-size:11px;color:var(--slate);}
+  .assign-priority{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;
+    padding:2px 7px;border-radius:4px;border:1.5px solid;
+  }
+  .p1{color:#B3452F;border-color:#B3452F;background:#FBEAE5;}
+  .p2{color:#9C6510;border-color:#D4A017;background:#FFF9C4;}
+  .p3{color:#3B7A57;border-color:#3B7A57;background:#E7F2EC;}
+  .p4,.p5{color:var(--slate);border-color:var(--line);background:var(--paper);}
+
+  .spot-empty-label{
+    font-size:13px;color:#4B5563;font-style:italic;
+    margin:auto 0;
+  }
+
+  .flag-icon{
+    position:absolute;top:10px;right:10px;
+    font-size:16px;color:var(--amber);
+  }
+
+  /* ── Scrollbar ── */
+  .zone-grid::-webkit-scrollbar{width:5px;}
+  .zone-grid::-webkit-scrollbar-track{background:transparent;}
+  .zone-grid::-webkit-scrollbar-thumb{background:#374151;border-radius:3px;}
+
+  /* ── Last updated ── */
+  .footer{
+    position:fixed;bottom:0;left:0;right:0;
+    background:#0f1621;border-top:1px solid #1F2937;
+    padding:6px 20px;display:flex;align-items:center;justify-content:space-between;
+    font-size:11px;color:#4B5563;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <img src="logo.png" alt="Texas FleetServ" class="header-logo">
+    <div>
+      <div class="header-title">ISY Shop Display</div>
+      <div class="header-sub">Industrial Support Yard — Live View</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="live-badge"><span class="live-dot"></span>LIVE</div>
+    <div>
+      <div class="clock" id="clock">--:-- --</div>
+      <div class="date-line" id="dateline"></div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="zone-panel">
+    <div class="zone-header red-zone">
+      <div class="zone-title"><i class="ti ti-tools"></i>Wait Repair</div>
+      <div class="zone-count-pill" id="wr-count">0 / 9</div>
+    </div>
+    <div class="zone-grid" id="wr-grid"></div>
+  </div>
+  <div class="zone-panel">
+    <div class="zone-header blue-zone">
+      <div class="zone-title"><i class="ti ti-building-warehouse"></i>Bay</div>
+      <div class="zone-count-pill" id="bay-count">0 / 6</div>
+    </div>
+    <div class="zone-grid" id="bay-grid"></div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>Texas FleetServ — Transport Log Display</span>
+  <span id="last-updated">Connecting...</span>
+</div>
+
+<script>
+(function(){
+  var API_BASE = '/api';
+
+  var WR_SPACES  = ['Wait Repair 1','Wait Repair 2','Wait Repair 3','Wait Repair 4','Wait Repair 5','Wait Repair 6','Wait Repair 7','Wait Repair 8','Wait Repair 9'];
+  var BAY_SPACES = ['Bay 1','Bay 2','Bay 3','Bay 4','Bay 5','Bay 6'];
+  var ISY_PREFIX = 'ISY \u2014 ';
+
+  var state = { trucks: [], entries: [] };
+
+  // ── Clock ──
+  function tickClock(){
+    var d = new Date();
+    var h = d.getHours(); var m = d.getMinutes(); var s = d.getSeconds();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    document.getElementById('clock').textContent =
+      h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + ' ' + ampm;
+    document.getElementById('dateline').textContent =
+      d.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  }
+  setInterval(tickClock, 1000);
+  tickClock();
+
+  // ── Data helpers ──
+  function getTruck(truckNo){
+    return state.trucks.find(function(t){ return t.truckNo === truckNo; });
+  }
+
+  function getOccupants(){
+    var latest = {};
+    state.entries.forEach(function(e){
+      if(!latest[e.truckNo] || e.createdAt > latest[e.truckNo].createdAt)
+        latest[e.truckNo] = e;
+    });
+    var occ = {};
+    Object.values(latest).forEach(function(e){
+      if(e.to && e.to.indexOf(ISY_PREFIX) === 0){
+        var space = e.to.replace(ISY_PREFIX,'').trim();
+        occ[space] = e;
+      }
+    });
+    return occ;
+  }
+
+  function getIssue(e){
+    if(!e) return null;
+    if(e.hasIssue && e.issueDetail) return e.issueDetail;
+    var prior = state.entries
+      .filter(function(en){ return en.truckNo === e.truckNo && en.hasIssue && en.issueDetail && (en.createdAt||0) <= (e.createdAt||0); })
+      .sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+    return prior.length ? prior[0].issueDetail : null;
+  }
+
+  function escHtml(s){
+    if(!s) return '';
+    var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML;
+  }
+
+  // ── Render ──
+  function renderZone(spaces, gridId, countId, colorClass){
+    var occ = getOccupants();
+    var occupied = spaces.filter(function(s){ return !!occ[s]; }).length;
+    document.getElementById(countId).textContent = occupied + ' / ' + spaces.length;
+
+    var grid = document.getElementById(gridId);
+    grid.innerHTML = '';
+
+    spaces.forEach(function(spaceName){
+      var e = occ[spaceName];
+      var card = document.createElement('div');
+
+      if(!e){
+        card.className = 'spot-card empty';
+        card.innerHTML =
+          '<div class="spot-label">' + escHtml(spaceName) + '</div>' +
+          '<div class="spot-empty-label">Empty</div>';
+      } else {
+        var truck = getTruck(e.truckNo);
+        var homeStation = truck ? (truck.homeStation && truck.homeStation.trim() ? truck.homeStation.trim() : truck.nickname || '') : '';
+        var issueText = getIssue(e);
+        var isFlagged = e.hasIssue;
+        card.className = 'spot-card ' + (isFlagged ? 'flagged' : 'occupied-' + colorClass);
+
+        var assignHTML = '';
+        if(e.assignTech || e.assignPriority){
+          assignHTML = '<div class="spot-assign">';
+          if(e.assignTech) assignHTML += '<span class="assign-tech"><i class="ti ti-user"></i>' + escHtml(e.assignTech) + '</span>';
+          if(e.assignPriority) assignHTML += '<span class="assign-priority p' + e.assignPriority + '">P' + e.assignPriority + '</span>';
+          assignHTML += '</div>';
+        }
+
+        card.innerHTML =
+          '<div class="spot-label">' + escHtml(spaceName) + '</div>' +
+          '<div class="spot-truck">' + escHtml(e.truckNo) + '</div>' +
+          (homeStation ? '<div class="spot-home"><i class="ti ti-home"></i>' + escHtml(homeStation) + '</div>' : '') +
+          (truck && truck.type ? '<span class="spot-type-badge">' + escHtml(truck.type) + '</span>' : '') +
+          (issueText ? '<div class="spot-issue"><i class="ti ti-alert-triangle"></i><span>' + escHtml(issueText) + '</span></div>' : '') +
+          assignHTML +
+          (isFlagged ? '<i class="ti ti-alert-triangle flag-icon"></i>' : '');
+      }
+      grid.appendChild(card);
+    });
+  }
+
+  function render(){
+    renderZone(WR_SPACES,  'wr-grid',  'wr-count',  'red');
+    renderZone(BAY_SPACES, 'bay-grid', 'bay-count', 'blue');
+  }
+
+  // ── Fetch loop ──
+  var lastEntriesStr = '';
+
+  async function fetchData(){
+    try {
+      // Fetch trucks once if empty
+      if(!state.trucks.length){
+        var tr = await fetch(API_BASE + '/trucks');
+        if(tr.ok){ var tj = await tr.json(); if(tj.trucks) state.trucks = tj.trucks; }
+      }
+      var er = await fetch(API_BASE + '/entries');
+      if(er.ok){
+        var ej = await er.json();
+        if(ej && ej.entries){
+          var newStr = JSON.stringify(ej.entries);
+          if(newStr !== lastEntriesStr){
+            lastEntriesStr = newStr;
+            state.entries = ej.entries;
+            render();
+          }
+        }
+      }
+      document.getElementById('last-updated').textContent =
+        'Last updated: ' + new Date().toLocaleTimeString();
+    } catch(err){
+      document.getElementById('last-updated').textContent = 'Connection error — retrying...';
+    }
+  }
+
+  fetchData();
+  setInterval(fetchData, 5000);
+})();
+</script>
+</body>
+</html>
